@@ -1,0 +1,45 @@
+from flask import Flask, request, jsonify  # Importation des modules Flask pour créer une application web et jsonify pour formater les réponses en JSON
+from flask_cors import CORS  # Importation du module Flask-CORS pour gérer les requêtes cross-origin
+import PyPDF2  # Importation du module PyPDF2 pour manipuler les fichiers PDF
+import sklearn  # Importation du module sklearn pour l'apprentissage automatique (machine learning)
+from sklearn.feature_extraction.text import CountVectorizer  # Importation de la classe CountVectorizer pour convertir du texte en vecteurs
+from sklearn.metrics.pairwise import cosine_similarity  # Importation de la fonction cosine_similarity pour calculer la similarité cosinus
+
+app = Flask(_name_)  # Création d'une instance de l'application Flask
+CORS(app)  # Activation du support CORS pour permettre les requêtes cross-origin
+
+@app.route('/compare-resume', methods=['POST'])  # Définition d'une route pour l'API
+def compare_resume():
+    # Get the resume file from the request
+    resume_file = request.files['resume']  # Récupération du fichier de CV à partir de la requête
+
+    # Open the resume file using PyPDF2
+    pdf_reader = PyPDF2.PdfReader(resume_file)  # Ouverture du fichier de CV avec PyPDF2
+    resume_page = pdf_reader.pages[-1]  # Extraction de la dernière page du CV
+    resume_text = resume_page.extract_text()  # Extraction du texte de la dernière page du CV
+
+    # Load the job description file
+    job_description_file = request.files['job_desc']  # Récupération du fichier de description de poste à partir de la requête
+    job_description_pdf_reader = PyPDF2.PdfReader(job_description_file)  # Ouverture du fichier de description de poste avec PyPDF2
+    job_description_page = job_description_pdf_reader.pages[-1]  # Extraction de la dernière page de la description de poste
+    job_description_text = job_description_page.extract_text()  # Extraction du texte de la dernière page de la description de poste
+
+    # Perform similarity comparison
+    text = [resume_text, job_description_text]  # Création d'une liste de texte avec le CV et la description de poste
+    cv = CountVectorizer()  # Création d'une instance de CountVectorizer
+    count_matrix = cv.fit_transform(text)  # Conversion du texte en une matrice de comptage
+    similarity_scores = cosine_similarity(count_matrix)  # Calcul des scores de similarité cosinus
+
+    # Calculate the match percentage
+    match_percentage = similarity_scores[0][1] * 100  # Récupération du score de similarité entre le CV et la description de poste
+    match_percentage = round(match_percentage, 2)  # Arrondissement du pourcentage de correspondance à 2 décimales
+
+    # Prepare the response
+    response = {
+        'match_percentage': match_percentage  # Création du dictionnaire de réponse avec le pourcentage de correspondance
+    }
+
+    return jsonify(response)  # Renvoi de la réponse au format JSON
+
+if _name_ == '_main_':
+    app.run()  # Démarrage de l'application Flask
